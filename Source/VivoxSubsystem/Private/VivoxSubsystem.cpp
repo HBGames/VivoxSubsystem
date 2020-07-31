@@ -57,6 +57,11 @@ void UVivoxSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FString("Voice Chat will not work properly until [VoiceChat.Vivox] is enabled in DefaultEngine.ini and your credential values are set correctly. See 'Docs/ShooterGameVoiceIntegrationGuide.pdf' for more info.")), &TitleText);
 	}
 
+	VivoxChat->OnVoiceChatAvailableAudioDevicesChanged().AddLambda([this]()
+	{
+		OnVoiceChatAvailableAudioDevicesChanged.Broadcast();
+	});
+
 	if (VivoxChat->Initialize())
 	{
 		Connect();
@@ -155,6 +160,16 @@ void UVivoxSubsystem::Login(const FString& PlayerName)
 void UVivoxSubsystem::SetPlayerMuted(const FString& PlayerName, const bool bMuted) const
 {
 	VivoxChat->SetPlayerMuted(PlayerName, bMuted);
+}
+
+TArray<FString> UVivoxSubsystem::GetAvailableInputDevices() const
+{
+	return VivoxChat->GetAvailableInputDevices();
+}
+
+TArray<FString> UVivoxSubsystem::GetAvailableOutputDevices() const
+{
+	return VivoxChat->GetAvailableOutputDevices();
 }
 
 bool UVivoxSubsystem::IsLoggedIn() const

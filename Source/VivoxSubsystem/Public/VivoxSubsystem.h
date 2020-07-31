@@ -4,6 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 #include "VoiceChat.h"
+#include "VivoxTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "VivoxSubsystem.generated.h"
 
@@ -66,6 +67,26 @@ enum class EVivoxVoiceChatChannelType : uint8
 	Echo
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnVivoxChatAvailableAudioDevicesChangedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnVivoxChatReconnectedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnVivoxChatConnectedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVivoxChatDisconnectedDelegate, const FVivoxChatResult&, Reason);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVivoxChatLoggedInDelegate, const FString&, PlayerName);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVivoxChatLoggedOutDelegate, const FString&, PlayerName);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVivoxChatCallStatsUpdatedDelegate, const FVoiceChatCallStats&, CallStats);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVivoxChatChannelJoinedDelegate, const FString&, ChannelName);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnVivoxChatChannelExitedDelegate, const FString&, ChannelName, const FVoiceChatResult&, Reason);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnVivoxChatPlayerAddedDelegate, const FString&, ChannelName, const FString&, PlayerName);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnVivoxChatPlayerRemovedDelegate, const FString&, ChannelName, const FString&, PlayerName);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnVivoxChatPlayerTalkingUpdatedDelegate, const FString&, ChannelName, const FString&, PlayerName, bool, bIsTalking);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnVivoxChatPlayerMuteUpdatedDelegate, const FString&, ChannelName, const FString&, PlayerName, bool, bIsMuted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnVivoxChatPlayerVolumeUpdatedDelegate, const FString&, ChannelName, const FString&, PlayerName, float, Volume);
+
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnVivoxChatRecordSamplesAvailableDelegate, TArrayView<const int16>, PcmSamples, int, SampleRate, int, Channels);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnVivoxChatAfterCaptureAudioReadDelegate, TArrayView<int16>, PcmSamples, int, SampleRate, int, Channels);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnVivoxChatBeforeCaptureAudioSentDelegate, TArrayView<const int16>, PcmSamples, int, SampleRate, int, Channels, bool, bIsSpeaking);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnVivoxChatBeforeRecvAudioRenderedDelegate, TArrayView<int16>, PcmSamples, int, SampleRate, int, Channels, bool, bIsSilence);
+
 /*
  *
  */
@@ -79,6 +100,20 @@ class VIVOXSUBSYSTEM_API UVivoxSubsystem : public UGameInstanceSubsystem
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+
+	/**
+	* Delegate broadcast whenever the available audio devices change. Any cached values from GetAvailableInputDevices or GetAvailableOutputDevices should be discarded and requeried
+	*/
+	UPROPERTY(BlueprintAssignable, Category = "Vivox|Delegates")
+	FOnVivoxChatAvailableAudioDevicesChangedDelegate OnVoiceChatAvailableAudioDevicesChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Vivox|Delegates")
+	FOnVivoxChatReconnectedDelegate OnVoiceChatReconnected;
+	UPROPERTY(BlueprintAssignable, Category = "Vivox|Delegates")
+	FOnVivoxChatConnectedDelegate OnVoiceChatConnected;
+	UPROPERTY(BlueprintAssignable, Category = "Vivox|Delegates")
+	FOnVivoxChatDisconnectedDelegate OnVoiceChatDisconnected;
+	UPROPERTY(BlueprintAssignable, Category = "Vivox|Delegates")
+	FOnVivoxChatLoggedInDelegate OnVoiceChatLoggedIn;
 
 	UFUNCTION(BlueprintCallable, Category="Vivox")
 	void Connect();
@@ -107,13 +142,29 @@ class VIVOXSUBSYSTEM_API UVivoxSubsystem : public UGameInstanceSubsystem
 	void SetPlayerMuted(const FString& PlayerName, bool bMuted) const;
 
 	/**
+	* Get a list of available audio input devices
+	*
+	* @return Array of audio input devices
+	*/
+	UFUNCTION(BlueprintPure, Category="Vivox")
+	TArray<FString> GetAvailableInputDevices() const;
+
+	/**
+	* Get a list of available audio output devices
+	*
+	* @return Array of audio output devices
+	*/
+	UFUNCTION(BlueprintPure, Category="Vivox")
+	TArray<FString> GetAvailableOutputDevices() const;
+
+	/**
 	* Are we logged in?
 	*
 	* @return true if we are logged in to the voice server
 	*/
 	UFUNCTION(BlueprintPure, Category="Vivox")
 	bool IsLoggedIn() const;
-	
+
 	/**
 	* Are we logging in?
 	*
